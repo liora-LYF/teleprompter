@@ -1,0 +1,3776 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark light">
+<title>《刘易肥一气之下做了个提词器》</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23111113'/%3E%3Cpath d='M17 22h30M17 32h22M17 42h26' stroke='%23fff' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<script>
+  /* Set the color theme before paint to avoid a flash on reload. */
+  try {
+    var savedSettings = localStorage.getItem('desktop-teleprompter.v2.settings');
+    if (savedSettings) {
+      var parsedSettings = JSON.parse(savedSettings);
+      if (parsedSettings && parsedSettings.theme === 'light') {
+        document.documentElement.dataset.theme = 'light';
+      }
+    }
+  } catch (error) {}
+</script>
+<style>
+/* ================================================================
+   Design tokens
+   ================================================================ */
+:root {
+  color-scheme: dark;
+  --ui-font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+             "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --app-bg: #080809;
+  --panel: #0e0e10;
+  --panel-raised: #141416;
+  --input-bg: #101012;
+  --text: #f3f3f5;
+  --text-secondary: #a3a3ab;
+  --text-tertiary: #6f6f78;
+  --border: rgba(255, 255, 255, 0.085);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --hover: rgba(255, 255, 255, 0.065);
+  --active: rgba(255, 255, 255, 0.1);
+  --accent: #f5f5f6;
+  --accent-text: #0b0b0d;
+  --accent-hover: #ffffff;
+  --brand-lime: #c8fd00;
+  --range-track: rgba(255, 255, 255, 0.13);
+  --range-fill: #c8fd00;
+  --range-thumb: #c8fd00;
+  --range-ring: #0e0e10;
+  --switch-off: rgba(255, 255, 255, 0.16);
+  --switch-on: #f1f1f3;
+  --switch-knob-off: #b5b5bd;
+  --switch-knob-on: #101012;
+  --danger: #ff6b6b;
+  --danger-soft: rgba(255, 107, 107, 0.12);
+  --guide: rgba(200, 253, 0, 0.34);
+  --guide-dot: #c8fd00;
+  --stage-bg: #000000;
+  --stage-text: #ffffff;
+  --stage-muted: #8a8a92;
+  --dock-bg: rgba(20, 20, 23, 0.9);
+  --dock-border: rgba(255, 255, 255, 0.12);
+  --shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.22);
+  --focus-dim: 0.4;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 9px;
+  --topbar-height: 64px;
+  --sidebar-width: 340px;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --app-bg: #efefec;
+  --panel: #f8f8f6;
+  --panel-raised: #ffffff;
+  --input-bg: #ffffff;
+  --text: #151516;
+  --text-secondary: #5f5f66;
+  --text-tertiary: #8c8c92;
+  --border: rgba(0, 0, 0, 0.09);
+  --border-strong: rgba(0, 0, 0, 0.17);
+  --hover: rgba(0, 0, 0, 0.055);
+  --active: rgba(0, 0, 0, 0.085);
+  --accent: #171719;
+  --accent-text: #ffffff;
+  --accent-hover: #000000;
+  --brand-lime: #c8fd00;
+  --range-track: rgba(0, 0, 0, 0.13);
+  --range-fill: #c8fd00;
+  --range-thumb: #c8fd00;
+  --range-ring: #f8f8f6;
+  --switch-off: rgba(0, 0, 0, 0.17);
+  --switch-on: #18181a;
+  --switch-knob-off: #ffffff;
+  --switch-knob-on: #ffffff;
+  --guide: rgba(200, 253, 0, 0.58);
+  --guide-dot: #c8fd00;
+  --stage-bg: #ffffff;
+  --stage-text: #000000;
+  --stage-muted: #6d6d73;
+  --dock-bg: rgba(255, 255, 255, 0.9);
+  --dock-border: rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.16);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* ================================================================
+   Base
+   ================================================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+html {
+  background: var(--app-bg);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overflow: hidden;
+  background: var(--app-bg);
+  color: var(--text);
+  font-family: var(--ui-font);
+  font-size: 14px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior: none;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+button,
+input[type="range"],
+input[type="checkbox"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+textarea:focus-visible,
+input:focus-visible,
+dialog:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--text);
+  color: var(--app-bg);
+}
+
+svg {
+  display: block;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ================================================================
+   Application shell
+   ================================================================ */
+.app {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 420px;
+  background: var(--app-bg);
+}
+
+/* ---------- Top bar ---------- */
+.topbar {
+  position: relative;
+  z-index: 40;
+  display: flex;
+  flex: 0 0 var(--topbar-height);
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent),
+    var(--panel);
+}
+
+:root[data-theme="light"] .topbar {
+  background: var(--panel);
+}
+
+.brand {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 11px;
+}
+
+.brand-mark {
+  display: grid;
+  flex: 0 0 35px;
+  width: 35px;
+  height: 35px;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 11px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.015)),
+    var(--panel-raised);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+:root[data-theme="light"] .brand-mark {
+  background:
+    linear-gradient(145deg, rgba(0, 0, 0, 0.035), rgba(0, 0, 0, 0)),
+    var(--panel-raised);
+}
+
+.brand-mark svg {
+  width: 19px;
+  height: 19px;
+}
+
+.brand-copy {
+  min-width: 0;
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand h1 {
+  margin: 0;
+  color: var(--brand-lime);
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+/* Keep the fluorescent wordmark legible on the light header without adding
+   any background shape around it. */
+:root[data-theme="light"] .brand h1 {
+  text-shadow:
+    0 0 0.5px rgba(8, 12, 0, 0.82),
+    0 1px 1px rgba(8, 12, 0, 0.16);
+}
+
+.version {
+  padding: 2px 5px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-tertiary);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+}
+
+.brand p {
+  margin: 2px 0 0;
+  color: var(--text-tertiary);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Theme segmented control */
+.theme-switch {
+  display: flex;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--app-bg);
+}
+
+.theme-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.theme-option:hover {
+  color: var(--text);
+}
+
+.theme-option.is-active {
+  background: var(--panel-raised);
+  color: var(--text);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    inset 0 0 0 1px var(--border);
+}
+
+.theme-dot {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(128, 128, 128, 0.4);
+}
+
+.theme-dot.dark {
+  background: #050505;
+}
+
+.theme-dot.light {
+  background: #ffffff;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-raised);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 100ms ease,
+    color 150ms ease;
+}
+
+.btn:hover {
+  border-color: var(--border-strong);
+  background: var(--hover);
+}
+
+.btn:active {
+  transform: scale(0.975);
+}
+
+.btn-primary {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.btn-primary:hover {
+  border-color: transparent;
+  background: var(--accent-hover);
+}
+
+.btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.btn kbd {
+  margin-left: 1px;
+  padding: 2px 5px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  opacity: 0.45;
+  font-family: var(--ui-font);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--panel-raised);
+  color: var(--text-secondary);
+  font-family: var(--ui-font);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ---------- Workspace ---------- */
+.workspace {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ---------- Sidebar ---------- */
+.sidebar {
+  display: flex;
+  flex: 0 0 var(--sidebar-width);
+  width: var(--sidebar-width);
+  min-height: 0;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.sidebar-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 14px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 9px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid var(--panel);
+  border-radius: 10px;
+  background: var(--border-strong);
+}
+
+.panel-section {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent 40%),
+    var(--panel-raised);
+}
+
+:root[data-theme="light"] .panel-section {
+  background: var(--panel-raised);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.025);
+}
+
+.panel-section + .panel-section {
+  margin-top: 12px;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.section-head h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.015em;
+}
+
+.section-meta {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.editor-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.script-input {
+  display: block;
+  width: 100%;
+  min-height: 128px;
+  max-height: 430px;
+  padding: 12px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  outline: none;
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.68;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.script-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.script-input:hover {
+  border-color: var(--border-strong);
+}
+
+.script-input:focus {
+  border-color: var(--text-tertiary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 7%, transparent);
+}
+
+.editor-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 28px;
+  margin-top: 8px;
+}
+
+.save-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+}
+
+.save-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  transition: background-color 200ms ease;
+}
+
+.save-indicator.is-unsaved .save-dot {
+  background: #d5a64a;
+}
+
+.text-button {
+  padding: 5px 7px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 10.5px;
+  font-weight: 500;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
+}
+
+.text-button:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.text-button.is-danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.text-button:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+/* Settings fields */
+.field + .field {
+  margin-top: 15px;
+}
+
+.field-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.field-head label,
+.field-label {
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.field-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--text);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.field-value small {
+  color: var(--text-tertiary);
+  font-family: var(--ui-font);
+  font-size: 9.5px;
+  font-weight: 500;
+}
+
+.range-wrap {
+  position: relative;
+}
+
+input[type="range"] {
+  --range-progress: 0%;
+  display: block;
+  width: 100%;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  outline: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--range-fill) 0,
+    var(--range-fill) var(--range-progress),
+    var(--range-track) var(--range-progress),
+    var(--range-track) 100%
+  );
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  width: 15px;
+  height: 15px;
+  margin-top: -5.5px;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  border-radius: 50%;
+  background: var(--range-thumb);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.24),
+    0 0 0 3px var(--range-ring),
+    0 1px 4px rgba(0, 0, 0, 0.3);
+  transition: transform 120ms ease;
+}
+
+input[type="range"]:hover::-webkit-slider-thumb,
+input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+input[type="range"]::-moz-range-track {
+  width: 100%;
+  height: 4px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--range-fill) 0,
+    var(--range-fill) var(--range-progress),
+    var(--range-track) var(--range-progress),
+    var(--range-track) 100%
+  );
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--range-thumb);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.24),
+    0 0 0 3px var(--range-ring),
+    0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.field-ends {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: -1px;
+  color: var(--text-tertiary);
+  font-size: 9px;
+  letter-spacing: 0.02em;
+}
+
+.field-ends .field-note {
+  color: var(--text-tertiary);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 8.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Toggle rows */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.toggle-row + .toggle-row {
+  padding-top: 11px;
+  margin-top: 11px;
+  border-top: 1px solid var(--border);
+}
+
+.toggle-copy {
+  min-width: 0;
+}
+
+.toggle-copy label {
+  display: block;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.toggle-copy small {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-tertiary);
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+
+.switch {
+  position: relative;
+  display: block;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 22px;
+  cursor: pointer;
+}
+
+.switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.switch-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--switch-off);
+  transition: background-color 180ms ease;
+}
+
+.switch-track::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--switch-knob-off);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  content: "";
+  transition:
+    transform 180ms cubic-bezier(0.22, 0.8, 0.3, 1),
+    background-color 180ms ease;
+}
+
+.switch input:checked + .switch-track {
+  background: var(--switch-on);
+}
+
+.switch input:checked + .switch-track::after {
+  background: var(--switch-knob-on);
+  transform: translateX(16px);
+}
+
+.switch input:focus-visible + .switch-track {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.aid-fields {
+  margin-top: 13px;
+  padding-top: 13px;
+  border-top: 1px solid var(--border);
+}
+
+.aid-fields .field + .field {
+  margin-top: 14px;
+}
+
+.micro-note {
+  margin: 7px 0 0;
+  color: var(--text-tertiary);
+  font-size: 9.5px;
+  line-height: 1.5;
+}
+
+/* Shortcut card */
+.shortcut-card {
+  margin-top: 12px;
+  padding: 13px 14px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+}
+
+.shortcut-title {
+  margin: 0 0 9px;
+  color: var(--text-tertiary);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.shortcut-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 12px;
+}
+
+.shortcut-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-tertiary);
+  font-size: 9.5px;
+  white-space: nowrap;
+}
+
+.shortcut-item kbd {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  font-size: 9px;
+}
+
+/* ================================================================
+   Teleprompter stage
+   ================================================================ */
+.stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--stage-bg);
+  isolation: isolate;
+  outline: none;
+}
+
+.script-viewport {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  overflow: hidden;
+  contain: layout paint;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Avoid a one-frame flash at the top while the initial reading anchor is
+   being measured from saved content. */
+.stage:not(.is-ready) .script-viewport {
+  opacity: 0;
+}
+
+.text-layer {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 60%;
+  will-change: transform;
+  transform: translate3d(-50%, 0, 0);
+  transform-origin: 50% 0;
+}
+
+.script-text {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  color: var(--stage-text);
+  font-family: var(--ui-font);
+  font-size: 48px;
+  font-weight: 500;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+  text-align: center;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  font-kerning: normal;
+  font-variant-ligatures: none;
+}
+
+/* Reference guide sits behind the text, so it never covers glyphs. */
+.reading-guide {
+  position: absolute;
+  z-index: 1;
+  top: 35%;
+  right: 0;
+  left: 0;
+  height: 1px;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 180ms ease;
+}
+
+.reading-guide::before {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--guide) 7%,
+    var(--guide) 93%,
+    transparent 100%
+  );
+  content: "";
+}
+
+.reading-guide::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 26px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--guide-dot);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.16),
+    0 0 14px rgba(200, 253, 0, 0.3);
+  content: "";
+  opacity: 0.95;
+  transform: translate(-50%, -50%);
+}
+
+.reading-guide.is-hidden {
+  opacity: 0;
+}
+
+.empty-state {
+  position: absolute;
+  z-index: 4;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  width: min(360px, 75%);
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  color: var(--stage-muted);
+  text-align: center;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition:
+    opacity 180ms ease,
+    visibility 180ms ease;
+}
+
+.empty-state.is-hidden {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.empty-state-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 15px;
+  opacity: 0.38;
+}
+
+.empty-state-icon svg {
+  width: 23px;
+  height: 23px;
+}
+
+.empty-state strong {
+  color: var(--stage-text);
+  font-size: 14px;
+  font-weight: 550;
+  letter-spacing: 0.01em;
+  opacity: 0.55;
+}
+
+.empty-state p {
+  margin: -7px 0 0;
+  font-size: 11px;
+  line-height: 1.6;
+  opacity: 0.66;
+}
+
+/* Stage overlay controls */
+.transport-bar {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 92px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    color-mix(in srgb, var(--stage-bg) 72%, transparent) 28%,
+    color-mix(in srgb, var(--stage-bg) 96%, transparent) 66%,
+    var(--stage-bg) 100%
+  );
+  pointer-events: none;
+}
+
+.transport-inner {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 18px 22px 12px;
+  pointer-events: auto;
+}
+
+.transport-meta {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 7px;
+  color: var(--stage-muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.7;
+  transition:
+    background-color 180ms ease,
+    opacity 180ms ease;
+}
+
+.app[data-state="playing"] .status-dot {
+  background: var(--stage-text);
+  opacity: 1;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--stage-text) 10%, transparent);
+}
+
+.app[data-state="paused"] .status-dot {
+  background: #e3ad55;
+  opacity: 1;
+}
+
+.app[data-state="finished"] .status-dot {
+  background: var(--stage-text);
+  opacity: 0.5;
+}
+
+.meta-divider {
+  width: 1px;
+  height: 9px;
+  margin: 0 2px;
+  background: currentColor;
+  opacity: 0.24;
+}
+
+.transport-controls {
+  display: flex;
+  align-items: center;
+  justify-self: center;
+  gap: 9px;
+}
+
+.icon-button {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--stage-text) 14%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--stage-bg) 55%, transparent);
+  color: var(--stage-text);
+  cursor: pointer;
+  opacity: 0.72;
+  transition:
+    opacity 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 100ms ease;
+}
+
+.icon-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--stage-text) 24%, transparent);
+  background: color-mix(in srgb, var(--stage-text) 8%, transparent);
+  opacity: 1;
+}
+
+.icon-button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.icon-button:disabled {
+  cursor: default;
+  opacity: 0.25;
+}
+
+.icon-button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.transport-text-button {
+  width: auto;
+  gap: 6px;
+  padding: 0 11px;
+}
+
+.transport-button-label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.play-button {
+  display: inline-flex;
+  min-width: 112px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 13px;
+  background: var(--stage-text);
+  color: var(--stage-bg);
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.015em;
+  transition:
+    opacity 150ms ease,
+    transform 100ms ease,
+    box-shadow 150ms ease;
+  box-shadow: 0 7px 24px color-mix(in srgb, var(--stage-bg) 20%, transparent);
+}
+
+:root[data-theme="dark"] .play-button {
+  box-shadow: 0 7px 26px rgba(255, 255, 255, 0.1);
+}
+
+.play-button:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.play-button:active {
+  transform: scale(0.98);
+}
+
+.play-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.play-icons {
+  position: relative;
+  display: grid;
+  width: 15px;
+  height: 15px;
+  place-items: center;
+}
+
+.play-icons svg {
+  position: absolute;
+}
+
+.play-button[data-mode="pause"] .icon-play,
+.play-button[data-mode="pause"] .icon-replay,
+.play-button[data-mode="play"] .icon-pause,
+.play-button[data-mode="play"] .icon-replay,
+.play-button[data-mode="replay"] .icon-play,
+.play-button[data-mode="replay"] .icon-pause {
+  display: none;
+}
+
+.transport-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  gap: 6px;
+  color: var(--stage-muted);
+  font-size: 9.5px;
+  white-space: nowrap;
+}
+
+.transport-hint kbd {
+  border-color: color-mix(in srgb, var(--stage-text) 17%, transparent);
+  background: color-mix(in srgb, var(--stage-bg) 50%, transparent);
+  color: var(--stage-muted);
+}
+
+/* Empty script state for primary controls */
+.app[data-empty="true"] .play-button {
+  opacity: 0.62;
+}
+
+/* ================================================================
+   Fullscreen dock
+   ================================================================ */
+.fs-dock {
+  position: absolute;
+  z-index: 60;
+  right: 0;
+  bottom: 22px;
+  left: 0;
+  display: none;
+  justify-content: center;
+  padding: 0 20px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 200ms ease,
+    transform 220ms cubic-bezier(0.22, 0.8, 0.3, 1);
+}
+
+.stage.is-fullscreen-view .fs-dock {
+  display: flex;
+}
+
+.stage.is-fullscreen-view.fs-ui-visible .fs-dock {
+  pointer-events: auto;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.stage.is-fullscreen-view:not(.fs-ui-visible) {
+  cursor: none;
+}
+
+.fs-dock-inner {
+  display: flex;
+  max-width: min(980px, calc(100vw - 40px));
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 12px;
+  padding: 10px 11px;
+  border: 1px solid var(--dock-border);
+  border-radius: 17px;
+  background: var(--dock-bg);
+  box-shadow: var(--shadow-lg);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+}
+
+.fs-dock .icon-button {
+  width: 38px;
+  height: 38px;
+  border-color: var(--dock-border);
+  background: transparent;
+  color: var(--text);
+  opacity: 0.82;
+}
+
+.fs-dock .icon-button:hover {
+  background: var(--hover);
+  opacity: 1;
+}
+
+.fs-play-button {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 11px;
+  background: var(--accent);
+  color: var(--accent-text);
+  cursor: pointer;
+  transition: transform 100ms ease, opacity 150ms ease;
+}
+
+.fs-play-button:hover {
+  opacity: 0.9;
+}
+
+.fs-play-button:active {
+  transform: scale(0.95);
+}
+
+.fs-play-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.fs-play-button[data-mode="pause"] .icon-play,
+.fs-play-button[data-mode="pause"] .icon-replay,
+.fs-play-button[data-mode="play"] .icon-pause,
+.fs-play-button[data-mode="play"] .icon-replay,
+.fs-play-button[data-mode="replay"] .icon-play,
+.fs-play-button[data-mode="replay"] .icon-pause {
+  display: none;
+}
+
+.fs-play-icons {
+  position: relative;
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+}
+
+.fs-play-icons svg {
+  position: absolute;
+}
+
+.fs-separator {
+  width: 1px;
+  height: 22px;
+  flex: 0 0 1px;
+  margin: 0 1px;
+  background: var(--border);
+}
+
+.fs-field {
+  display: grid;
+  min-width: 130px;
+  flex: 1 1 130px;
+  max-width: 160px;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: 9.5px;
+  white-space: nowrap;
+}
+
+.fs-field-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.fs-field output {
+  color: var(--text);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-field input[type="range"] {
+  grid-column: 1 / -1;
+  margin-top: 1px;
+}
+
+.fs-exit-button {
+  display: inline-flex;
+  height: 34px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.fs-exit-button:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.fs-exit-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.fs-exit-button kbd {
+  height: 18px;
+  font-size: 8.5px;
+}
+
+/* Fullscreen layout, both native and faux fallback */
+.stage.is-fullscreen-view {
+  position: fixed;
+  z-index: 999;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  border-radius: 0;
+}
+
+.stage.is-fullscreen-view .transport-bar {
+  display: none;
+}
+
+.stage.is-fullscreen-view .empty-state {
+  color: #777;
+}
+
+/* Fallback fullscreen locks the underlying view. */
+body.is-faux-fullscreen {
+  overflow: hidden;
+}
+
+/* ================================================================
+   Toast + dialog
+   ================================================================ */
+.toast-stack {
+  position: absolute;
+  z-index: 80;
+  top: 18px;
+  left: 50%;
+  display: flex;
+  width: min(440px, calc(100% - 40px));
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.toast {
+  max-width: 100%;
+  padding: 9px 13px;
+  border: 1px solid var(--dock-border);
+  border-radius: 9px;
+  background: var(--dock-bg);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  animation: toast-in 180ms ease both;
+}
+
+.toast.is-leaving {
+  animation: toast-out 170ms ease both;
+}
+
+.toast.is-success {
+  border-color: color-mix(in srgb, var(--text) 24%, transparent);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+dialog {
+  width: min(380px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 17px;
+  background: var(--panel-raised);
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.64);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+.dialog-content {
+  padding: 22px;
+}
+
+.dialog-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  margin-bottom: 14px;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.dialog-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.dialog-content h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.dialog-content p {
+  margin: 7px 0 0;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  line-height: 1.65;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.dialog-actions .btn {
+  min-width: 74px;
+}
+
+.btn-danger {
+  border-color: transparent;
+  background: var(--danger);
+  color: #180606;
+}
+
+.btn-danger:hover {
+  border-color: transparent;
+  background: #ff7f7f;
+}
+
+/* ================================================================
+   Responsive
+   ================================================================ */
+@media (max-width: 1180px) {
+  :root {
+    --sidebar-width: 312px;
+  }
+
+  .brand p {
+    display: none;
+  }
+
+  .version {
+    display: none;
+  }
+
+  .transport-hint {
+    display: none;
+  }
+
+  .transport-inner {
+    grid-template-columns: 1fr auto 1fr;
+  }
+
+  .transport-meta {
+    min-width: 72px;
+  }
+}
+
+@media (max-width: 900px) {
+  :root {
+    --sidebar-width: 286px;
+    --topbar-height: 58px;
+  }
+
+  .topbar {
+    padding: 0 14px;
+  }
+
+  .brand h1 {
+    font-size: 13.5px;
+  }
+
+  .theme-option {
+    padding: 7px;
+  }
+
+  .theme-option span:last-child {
+    display: none;
+  }
+
+  .topbar-actions {
+    gap: 8px;
+  }
+
+  .btn kbd {
+    display: none;
+  }
+
+  .sidebar-scroll {
+    padding: 12px;
+  }
+
+  .panel-section {
+    padding: 13px;
+  }
+
+  .transport-inner {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .transport-meta {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 760px) {
+  .transport-button-label {
+    display: none;
+  }
+
+  .transport-text-button {
+    width: 40px;
+    gap: 0;
+    padding: 0;
+  }
+}
+
+@media (max-height: 740px) {
+  .script-input {
+    min-height: 118px;
+  }
+
+  .sidebar-scroll {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .panel-section {
+    padding: 13px;
+  }
+
+  .shortcut-card {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app" data-state="idle" data-empty="true">
+  <!-- Top toolbar -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3.25" y="4.25" width="17.5" height="15.5" rx="3.2"></rect>
+          <path d="M7 9.25h10M7 12h7.2M7 14.75h8.4"></path>
+          <circle cx="17.2" cy="7.8" r="0.7" fill="#c8fd00" stroke="none"></circle>
+        </svg>
+      </div>
+      <div class="brand-copy">
+        <div class="brand-row">
+          <h1>《刘易肥一气之下做了个提词器》</h1>
+          <span class="version">V2.0</span>
+        </div>
+        <p>让目光留在镜头里</p>
+      </div>
+    </div>
+
+    <div class="topbar-actions">
+      <div class="theme-switch" role="group" aria-label="阅读背景">
+        <button type="button" class="theme-option is-active" id="themeDarkBtn" data-theme-option="dark" aria-pressed="true" aria-label="切换为黑色背景">
+          <span class="theme-dot dark" aria-hidden="true"></span>
+          <span>黑色背景</span>
+        </button>
+        <button type="button" class="theme-option" id="themeLightBtn" data-theme-option="light" aria-pressed="false" aria-label="切换为白色背景">
+          <span class="theme-dot light" aria-hidden="true"></span>
+          <span>白色背景</span>
+        </button>
+      </div>
+      <button type="button" class="btn btn-primary" id="fullscreenBtn" title="进入全屏提词（F）">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"></path>
+        </svg>
+        <span>全屏提词</span>
+        <kbd>F</kbd>
+      </button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <!-- Settings sidebar -->
+    <aside class="sidebar" aria-label="提词设置">
+      <div class="sidebar-scroll">
+        <section class="panel-section editor-section">
+          <div class="section-head">
+            <h2>文案编辑</h2>
+            <span class="section-meta" id="charCount">0 字</span>
+          </div>
+          <textarea
+            id="scriptInput"
+            class="script-input"
+            spellcheck="false"
+            autocomplete="off"
+            aria-label="口播文案"
+            placeholder="请在这里粘贴你的口播视频脚本……"
+          ></textarea>
+          <div class="editor-footer">
+            <span class="save-indicator" id="saveIndicator">
+              <span class="save-dot" aria-hidden="true"></span>
+              <span id="saveText">本地自动保存</span>
+            </span>
+            <button type="button" class="text-button is-danger" id="clearScriptBtn" disabled>清空文案</button>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-head">
+            <h2>播放设置</h2>
+            <span class="section-meta">实时生效</span>
+          </div>
+
+          <div class="field">
+            <div class="field-head">
+              <label for="speedRange">滚动速度</label>
+              <span class="field-value"><span id="speedValue">3.0</span><small>档</small></span>
+            </div>
+            <div class="range-wrap">
+              <input type="range" id="speedRange" min="1" max="10" step="0.5" value="3" aria-label="滚动速度">
+            </div>
+            <div class="field-ends">
+              <span>慢</span>
+              <span class="field-note" id="speedPx">30 px/s</span>
+              <span>快</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-head">
+              <label for="fontRange">字体大小</label>
+              <span class="field-value"><span id="fontValue">48</span><small>px</small></span>
+            </div>
+            <div class="range-wrap">
+              <input type="range" id="fontRange" min="24" max="100" step="2" value="48" aria-label="字体大小">
+            </div>
+            <div class="field-ends">
+              <span>小</span>
+              <span class="field-note">24 – 100 px</span>
+              <span>大</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-head">
+              <label for="lineHeightRange">文字行间距</label>
+              <span class="field-value"><span id="lineHeightValue">1.6</span><small>倍</small></span>
+            </div>
+            <div class="range-wrap">
+              <input type="range" id="lineHeightRange" min="1.2" max="2.2" step="0.1" value="1.6" aria-label="文字行间距">
+            </div>
+            <div class="field-ends">
+              <span>紧凑</span>
+              <span></span>
+              <span>宽松</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-head">
+            <h2>阅读辅助</h2>
+            <span class="section-meta">统一阅读锚点</span>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-copy">
+              <label for="guideToggle">显示阅读参考线</label>
+              <small>固定在阅读锚点上的视觉基准</small>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="guideToggle" checked aria-label="显示阅读参考线">
+              <span class="switch-track" aria-hidden="true"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-copy">
+              <label for="focusToggle">阅读焦点高亮</label>
+              <small>突出当前阅读位置，弱化其余文字</small>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="focusToggle" checked aria-label="阅读焦点高亮">
+              <span class="switch-track" aria-hidden="true"></span>
+            </label>
+          </div>
+
+          <div class="aid-fields">
+            <div class="field">
+              <div class="field-head">
+                <label for="guidePositionRange">参考线位置</label>
+                <span class="field-value" id="guidePositionValue">35%</span>
+              </div>
+              <div class="range-wrap">
+                <input type="range" id="guidePositionRange" min="20" max="70" step="5" value="35" aria-label="参考线位置">
+              </div>
+              <div class="field-ends">
+                <span>靠上</span>
+                <span class="field-note">占据画面高度</span>
+                <span>靠下</span>
+              </div>
+              <p class="micro-note">关闭参考线后，阅读锚点仍按此位置计算。</p>
+            </div>
+
+            <div class="field">
+              <div class="field-head">
+                <label for="readingWidthRange">阅读区域宽度</label>
+                <span class="field-value" id="readingWidthValue">60%</span>
+              </div>
+              <div class="range-wrap">
+                <input type="range" id="readingWidthRange" min="30" max="100" step="5" value="60" aria-label="阅读区域宽度">
+              </div>
+              <div class="field-ends">
+                <span>窄</span>
+                <span class="field-note">减少眼球左右移动</span>
+                <span>宽</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="shortcut-card">
+          <p class="shortcut-title">快捷键</p>
+          <div class="shortcut-list">
+            <span class="shortcut-item"><kbd>Space</kbd>播放 / 暂停</span>
+            <span class="shortcut-item"><kbd>↑</kbd><kbd>↓</kbd>速度</span>
+            <span class="shortcut-item"><kbd>+</kbd><kbd>−</kbd>字号</span>
+            <span class="shortcut-item"><kbd>R</kbd>重头开始</span>
+            <span class="shortcut-item"><kbd>Home</kbd>返回顶部</span>
+            <span class="shortcut-item"><kbd>F</kbd>全屏</span>
+            <span class="shortcut-item"><kbd>Esc</kbd>退出全屏</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Teleprompter stage -->
+    <main class="stage" id="stage" tabindex="-1" aria-label="提词区域">
+      <div class="reading-guide" id="readingGuide" aria-hidden="true"></div>
+
+      <div class="script-viewport" id="scriptViewport">
+        <div class="text-layer" id="textLayer">
+          <div class="script-text" id="scriptText"></div>
+        </div>
+      </div>
+
+      <div class="empty-state" id="emptyState">
+        <div class="empty-state-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5z"></path>
+            <path d="M7.5 9h9M7.5 12h5.8M7.5 15h7"></path>
+          </svg>
+        </div>
+        <strong>从左侧粘贴你的口播脚本</strong>
+        <p>文字会围绕同一条阅读锚点平稳滚动<br>调整参考线、字号与宽度，始终保持阅读位置稳定</p>
+      </div>
+
+      <!-- Normal-mode transport -->
+      <footer class="transport-bar" aria-label="播放控制">
+        <div class="transport-inner">
+          <div class="transport-meta">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span id="statusText" aria-live="polite">未开始</span>
+            <span class="meta-divider" aria-hidden="true"></span>
+            <span id="progressText">0%</span>
+          </div>
+
+          <div class="transport-controls">
+            <button type="button" class="icon-button transport-text-button" id="topBtn" title="返回顶部（Home）" aria-label="返回顶部" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 4h14M12 20V8M6.5 13.5 12 8l5.5 5.5"></path>
+              </svg>
+              <span class="transport-button-label">返回顶部</span>
+            </button>
+
+            <button type="button" class="play-button" id="playBtn" data-mode="play" aria-label="开始播放">
+              <span class="play-icons" aria-hidden="true">
+                <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M7.35 5.2a1 1 0 0 1 1.53-.85l10.2 6.8a1 1 0 0 1 0 1.7l-10.2 6.8a1 1 0 0 1-1.53-.85z"></path></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6.2" y="4.5" width="3.7" height="15" rx="1.2"></rect><rect x="14.1" y="4.5" width="3.7" height="15" rx="1.2"></rect></svg>
+                <svg class="icon-replay" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6"></path><path d="M5.1 15a8 8 0 1 0 .8-7.9L4 10"></path></svg>
+              </span>
+              <span id="playLabel">开始</span>
+            </button>
+
+            <button type="button" class="icon-button transport-text-button" id="restartBtn" title="重头开始（R）" aria-label="重头开始" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 4v6h6"></path>
+                <path d="M5.1 15a8 8 0 1 0 .8-7.9L4 10"></path>
+              </svg>
+              <span class="transport-button-label">重头开始</span>
+            </button>
+          </div>
+
+          <div class="transport-hint">
+            <kbd>Space</kbd>
+            <span>播放 / 暂停</span>
+          </div>
+        </div>
+      </footer>
+
+      <!-- Fullscreen controls appear only in fullscreen / immersive mode -->
+      <div class="fs-dock" id="fsDock" aria-label="全屏快捷控制">
+        <div class="fs-dock-inner">
+          <button type="button" class="fs-play-button" id="fsPlayBtn" data-mode="play" title="开始 / 暂停" aria-label="开始播放">
+            <span class="fs-play-icons" aria-hidden="true">
+              <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M7.35 5.2a1 1 0 0 1 1.53-.85l10.2 6.8a1 1 0 0 1 0 1.7l-10.2 6.8a1 1 0 0 1-1.53-.85z"></path></svg>
+              <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6.2" y="4.5" width="3.7" height="15" rx="1.2"></rect><rect x="14.1" y="4.5" width="3.7" height="15" rx="1.2"></rect></svg>
+              <svg class="icon-replay" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6"></path><path d="M5.1 15a8 8 0 1 0 .8-7.9L4 10"></path></svg>
+            </span>
+          </button>
+
+          <button type="button" class="icon-button" id="fsRestartBtn" title="重头开始（R）" aria-label="重头开始">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 4v6h6"></path>
+              <path d="M5.1 15a8 8 0 1 0 .8-7.9L4 10"></path>
+            </svg>
+          </button>
+
+          <span class="fs-separator" aria-hidden="true"></span>
+
+          <label class="fs-field">
+            <span class="fs-field-label">速度 <output id="fsSpeedValue">3.0</output></span>
+            <input type="range" id="fsSpeedRange" min="1" max="10" step="0.5" value="3" aria-label="全屏滚动速度">
+          </label>
+
+          <label class="fs-field">
+            <span class="fs-field-label">字号 <output id="fsFontValue">48px</output></span>
+            <input type="range" id="fsFontRange" min="24" max="100" step="2" value="48" aria-label="全屏字体大小">
+          </label>
+
+          <label class="fs-field">
+            <span class="fs-field-label">宽度 <output id="fsReadingWidthValue">60%</output></span>
+            <input type="range" id="fsReadingWidthRange" min="30" max="100" step="5" value="60" aria-label="全屏阅读区域宽度">
+          </label>
+
+          <span class="fs-separator" aria-hidden="true"></span>
+
+          <button type="button" class="fs-exit-button" id="exitFullscreenBtn" title="退出全屏（Esc）">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 8h4V4M20 16h-4v4M4 16h4v4M20 8h-4V4"></path>
+            </svg>
+            <span>退出全屏</span>
+            <kbd>Esc</kbd>
+          </button>
+        </div>
+      </div>
+
+      <div class="toast-stack" id="toastStack" role="status" aria-live="polite" aria-atomic="false"></div>
+    </main>
+  </div>
+</div>
+
+<dialog id="clearDialog" aria-labelledby="clearDialogTitle">
+  <div class="dialog-content">
+    <div class="dialog-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 7h16M9.5 7V5h5v2M7 7l.7 13h8.6L17 7M10 11v5M14 11v5"></path>
+      </svg>
+    </div>
+    <h2 id="clearDialogTitle">清空全部文案？</h2>
+    <p>当前口播文案将被清空，且无法撤销。滚动设置和阅读参数会保留。</p>
+    <div class="dialog-actions">
+      <button type="button" class="btn" id="cancelClearBtn">取消</button>
+      <button type="button" class="btn btn-danger" id="confirmClearBtn">确认清空</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ================================================================
+     Constants and small utilities
+     ================================================================ */
+  const STORAGE_KEYS = Object.freeze({
+    script: 'desktop-teleprompter.v2.script',
+    settings: 'desktop-teleprompter.v2.settings'
+  });
+
+  const DEFAULTS = Object.freeze({
+    speed: 3,
+    fontSize: 48,
+    lineHeight: 1.6,
+    readingWidth: 60,
+    guidePosition: 35,
+    theme: 'dark',
+    guideVisible: true,
+    focusEnabled: true
+  });
+
+  const LIMITS = Object.freeze({
+    speed: [1, 10],
+    fontSize: [24, 100],
+    lineHeight: [1.2, 2.2],
+    readingWidth: [30, 100],
+    guidePosition: [20, 70]
+  });
+
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+  const roundToStep = (value, step) => Math.round(value / step) * step;
+
+  const debounce = (fn, delay) => {
+    let timer = 0;
+    const wrapped = (...args) => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        timer = 0;
+        fn(...args);
+      }, delay);
+    };
+    wrapped.flush = (...args) => {
+      if (timer) {
+        window.clearTimeout(timer);
+        timer = 0;
+        fn(...args);
+      }
+    };
+    wrapped.cancel = () => {
+      if (timer) window.clearTimeout(timer);
+      timer = 0;
+    };
+    return wrapped;
+  };
+
+  /* ================================================================
+     DOM references
+     ================================================================ */
+  const dom = {
+    app: $('#app'),
+    topbar: $('.topbar'),
+    sidebar: $('.sidebar'),
+    stage: $('#stage'),
+    scriptViewport: $('#scriptViewport'),
+    textLayer: $('#textLayer'),
+    scriptText: $('#scriptText'),
+    readingGuide: $('#readingGuide'),
+    emptyState: $('#emptyState'),
+    scriptInput: $('#scriptInput'),
+    charCount: $('#charCount'),
+    clearScriptBtn: $('#clearScriptBtn'),
+    saveIndicator: $('#saveIndicator'),
+    saveText: $('#saveText'),
+    speedRange: $('#speedRange'),
+    speedValue: $('#speedValue'),
+    speedPx: $('#speedPx'),
+    fontRange: $('#fontRange'),
+    fontValue: $('#fontValue'),
+    lineHeightRange: $('#lineHeightRange'),
+    lineHeightValue: $('#lineHeightValue'),
+    guideToggle: $('#guideToggle'),
+    focusToggle: $('#focusToggle'),
+    guidePositionRange: $('#guidePositionRange'),
+    guidePositionValue: $('#guidePositionValue'),
+    readingWidthRange: $('#readingWidthRange'),
+    readingWidthValue: $('#readingWidthValue'),
+    themeDarkBtn: $('#themeDarkBtn'),
+    themeLightBtn: $('#themeLightBtn'),
+    fullscreenBtn: $('#fullscreenBtn'),
+    statusText: $('#statusText'),
+    progressText: $('#progressText'),
+    topBtn: $('#topBtn'),
+    playBtn: $('#playBtn'),
+    playLabel: $('#playLabel'),
+    restartBtn: $('#restartBtn'),
+    fsDock: $('#fsDock'),
+    fsPlayBtn: $('#fsPlayBtn'),
+    fsRestartBtn: $('#fsRestartBtn'),
+    fsSpeedRange: $('#fsSpeedRange'),
+    fsSpeedValue: $('#fsSpeedValue'),
+    fsFontRange: $('#fsFontRange'),
+    fsFontValue: $('#fsFontValue'),
+    fsReadingWidthRange: $('#fsReadingWidthRange'),
+    fsReadingWidthValue: $('#fsReadingWidthValue'),
+    exitFullscreenBtn: $('#exitFullscreenBtn'),
+    toastStack: $('#toastStack'),
+    clearDialog: $('#clearDialog'),
+    cancelClearBtn: $('#cancelClearBtn'),
+    confirmClearBtn: $('#confirmClearBtn')
+  };
+
+  /* ================================================================
+     Application state
+     ================================================================ */
+  const state = {
+    settings: { ...DEFAULTS },
+    script: '',
+    storageAvailable: true,
+    engine: {
+      status: 'idle',          // idle | playing | paused | finished
+      readingPos: 0,           // text-local y coordinate currently aligned to the anchor
+      rafId: null,
+      lastTimestamp: 0,
+      lastAnchorChar: null,
+      lastCharSample: 0
+    },
+    layout: {
+      stageWidth: 0,
+      stageHeight: 0,
+      anchorY: 0,
+      textWidth: 0,
+      lineHeightPx: 0,
+      initialPos: 0,
+      endPos: 0,
+      maxTravel: 0
+    },
+    pendingLayout: null,
+    pendingResizeChar: null,
+    resizeRaf: null,
+    fsHideTimer: 0,
+    fsFallbackTimer: 0,
+    fsUiVisible: false,
+    nativeFullscreen: false,
+    fauxFullscreen: false,
+    initialized: false
+  };
+
+  const engine = state.engine;
+  const layout = state.layout;
+
+  /* ================================================================
+     Persistence
+     ================================================================ */
+  let storageFailureNotified = false;
+
+  function markStorageUnavailable(error) {
+    state.storageAvailable = false;
+    if (dom.saveIndicator) {
+      window.clearTimeout(saveScriptNow.indicatorTimer);
+      dom.saveIndicator.classList.remove('is-unsaved');
+      dom.saveText.textContent = '本地存储不可用';
+    }
+    if (storageFailureNotified || !state.initialized) return;
+    storageFailureNotified = true;
+    showToast('浏览器本地存储不可用，当前文案和设置可能无法自动保存。', 6200);
+    console.warn('localStorage unavailable:', error);
+  }
+
+  function testStorage() {
+    try {
+      const probe = '__teleprompter_probe__';
+      window.localStorage.setItem(probe, '1');
+      window.localStorage.removeItem(probe);
+      return true;
+    } catch (error) {
+      markStorageUnavailable(error);
+      return false;
+    }
+  }
+
+  function readStoredSettings() {
+    let raw = null;
+    try {
+      raw = window.localStorage.getItem(STORAGE_KEYS.settings);
+    } catch (error) {
+      markStorageUnavailable(error);
+      return null;
+    }
+
+    if (!raw) return null;
+
+    // Corrupt JSON is not the same thing as an unavailable storage API. Fall
+    // back to defaults while keeping future saves working.
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+      return parsed;
+    } catch (error) {
+      console.warn('Ignoring corrupt saved teleprompter settings:', error);
+      return null;
+    }
+  }
+
+  function readStoredScript() {
+    try {
+      const value = window.localStorage.getItem(STORAGE_KEYS.script);
+      return typeof value === 'string' ? value : '';
+    } catch (error) {
+      markStorageUnavailable(error);
+      return '';
+    }
+  }
+
+  function sanitizeSettings(raw) {
+    const safe = { ...DEFAULTS };
+    if (!raw || typeof raw !== 'object') return safe;
+
+    const numericFields = [
+      ['speed', 0.5],
+      ['fontSize', 2],
+      ['lineHeight', 0.1],
+      ['readingWidth', 5],
+      ['guidePosition', 5]
+    ];
+
+    for (const [field, step] of numericFields) {
+      const value = Number(raw[field]);
+      if (Number.isFinite(value)) {
+        const [min, max] = LIMITS[field];
+        safe[field] = clamp(roundToStep(value, step), min, max);
+      }
+    }
+
+    if (raw.theme === 'light' || raw.theme === 'dark') safe.theme = raw.theme;
+    if (typeof raw.guideVisible === 'boolean') safe.guideVisible = raw.guideVisible;
+    if (typeof raw.focusEnabled === 'boolean') safe.focusEnabled = raw.focusEnabled;
+
+    return safe;
+  }
+
+  function saveSettingsNow() {
+    if (!state.storageAvailable) return;
+    try {
+      window.localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(state.settings));
+    } catch (error) {
+      markStorageUnavailable(error);
+    }
+  }
+
+  function saveScriptNow() {
+    if (!state.storageAvailable) return;
+    try {
+      window.localStorage.setItem(STORAGE_KEYS.script, state.script);
+      dom.saveIndicator.classList.remove('is-unsaved');
+      dom.saveText.textContent = '已保存到本地';
+      window.clearTimeout(saveScriptNow.indicatorTimer);
+      saveScriptNow.indicatorTimer = window.setTimeout(() => {
+        if (state.storageAvailable) dom.saveText.textContent = '本地自动保存';
+      }, 1600);
+    } catch (error) {
+      markStorageUnavailable(error);
+    }
+  }
+
+  const saveScriptDebounced = debounce(saveScriptNow, 300);
+
+  function loadPersistedData() {
+    if (!testStorage()) return;
+    state.script = readStoredScript();
+    const stored = readStoredSettings();
+    state.settings = sanitizeSettings(stored);
+  }
+
+  /* ================================================================
+     UI helpers
+     ================================================================ */
+  let toastId = 0;
+
+  function showToast(message, duration = 2600, type = '') {
+    if (!dom.toastStack) return;
+
+    let toast = dom.toastStack.querySelector('.toast.is-current');
+    if (toast) {
+      toast.remove();
+    }
+
+    toast = document.createElement('div');
+    toast.className = 'toast is-current' + (type ? ` is-${type}` : '');
+    toast.dataset.toastId = String(++toastId);
+    toast.textContent = message;
+    dom.toastStack.appendChild(toast);
+
+    window.setTimeout(() => {
+      if (!toast.isConnected) return;
+      toast.classList.add('is-leaving');
+      window.setTimeout(() => toast.remove(), 190);
+    }, duration);
+  }
+
+  function updateRangeFill(input) {
+    const min = Number(input.min) || 0;
+    const max = Number(input.max) || 100;
+    const value = Number(input.value) || 0;
+    const progress = max > min ? ((value - min) / (max - min)) * 100 : 0;
+    input.style.setProperty('--range-progress', `${clamp(progress, 0, 100)}%`);
+  }
+
+  function updateAllRangeFills() {
+    $$('input[type="range"]').forEach(updateRangeFill);
+  }
+
+  function setTheme(theme, { persist = true } = {}) {
+    state.settings.theme = theme === 'light' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = state.settings.theme;
+
+    const isDark = state.settings.theme === 'dark';
+    dom.themeDarkBtn.classList.toggle('is-active', isDark);
+    dom.themeLightBtn.classList.toggle('is-active', !isDark);
+    dom.themeDarkBtn.setAttribute('aria-pressed', String(isDark));
+    dom.themeLightBtn.setAttribute('aria-pressed', String(!isDark));
+
+    // Theme changes do not affect the reading anchor, playback, or scroll position.
+    updateFocusMask();
+    if (persist) saveSettingsNow();
+  }
+
+  function setGuideVisible(visible, { persist = true } = {}) {
+    state.settings.guideVisible = Boolean(visible);
+    dom.guideToggle.checked = state.settings.guideVisible;
+    dom.readingGuide.classList.toggle('is-hidden', !state.settings.guideVisible);
+    if (persist) saveSettingsNow();
+  }
+
+  function setFocusEnabled(enabled, { persist = true } = {}) {
+    state.settings.focusEnabled = Boolean(enabled);
+    dom.focusToggle.checked = state.settings.focusEnabled;
+    updateFocusMask();
+    if (persist) saveSettingsNow();
+  }
+
+  function setSpeed(value, { persist = true } = {}) {
+    const rounded = clamp(roundToStep(Number(value), 0.5), LIMITS.speed[0], LIMITS.speed[1]);
+    state.settings.speed = rounded;
+    dom.speedRange.value = String(rounded);
+    dom.fsSpeedRange.value = String(rounded);
+    const formatted = rounded.toFixed(1);
+    dom.speedValue.textContent = formatted;
+    dom.fsSpeedValue.textContent = formatted;
+    dom.speedPx.textContent = `${Math.round(rounded * 10)} px/s`;
+    updateRangeFill(dom.speedRange);
+    updateRangeFill(dom.fsSpeedRange);
+    if (persist) saveSettingsNow();
+  }
+
+  function setGuidePosition(value, { persist = true } = {}) {
+    const rounded = clamp(roundToStep(Number(value), 5), LIMITS.guidePosition[0], LIMITS.guidePosition[1]);
+    state.settings.guidePosition = rounded;
+    dom.guidePositionRange.value = String(rounded);
+    dom.guidePositionValue.textContent = `${rounded}%`;
+    updateRangeFill(dom.guidePositionRange);
+
+    // The reading position in text coordinates is unchanged. Moving the anchor
+    // therefore keeps the same sentence at the new anchor.
+    updateAnchorOnly();
+
+    if (persist) saveSettingsNow();
+  }
+
+  function syncAllControlsFromState() {
+    const settings = state.settings;
+
+    dom.speedRange.value = String(settings.speed);
+    dom.fsSpeedRange.value = String(settings.speed);
+    dom.speedValue.textContent = settings.speed.toFixed(1);
+    dom.fsSpeedValue.textContent = settings.speed.toFixed(1);
+    dom.speedPx.textContent = `${Math.round(settings.speed * 10)} px/s`;
+
+    dom.fontRange.value = String(settings.fontSize);
+    dom.fsFontRange.value = String(settings.fontSize);
+    dom.fontValue.textContent = String(settings.fontSize);
+    dom.fsFontValue.textContent = `${settings.fontSize}px`;
+
+    dom.lineHeightRange.value = String(settings.lineHeight);
+    dom.lineHeightValue.textContent = settings.lineHeight.toFixed(1);
+
+    dom.guidePositionRange.value = String(settings.guidePosition);
+    dom.guidePositionValue.textContent = `${settings.guidePosition}%`;
+
+    dom.readingWidthRange.value = String(settings.readingWidth);
+    dom.readingWidthValue.textContent = `${settings.readingWidth}%`;
+    dom.fsReadingWidthRange.value = String(settings.readingWidth);
+    dom.fsReadingWidthValue.textContent = `${settings.readingWidth}%`;
+
+    dom.guideToggle.checked = settings.guideVisible;
+    dom.focusToggle.checked = settings.focusEnabled;
+    dom.readingGuide.classList.toggle('is-hidden', !settings.guideVisible);
+
+    dom.scriptText.style.fontSize = `${settings.fontSize}px`;
+    dom.scriptText.style.lineHeight = String(settings.lineHeight);
+
+    updateAllRangeFills();
+    setTheme(settings.theme, { persist: false });
+  }
+
+  function updateEditorChrome() {
+    const count = state.script.length;
+    const hasScript = state.script.trim().length > 0;
+    dom.charCount.textContent = `${count.toLocaleString('zh-CN')} 字`;
+    dom.clearScriptBtn.disabled = count === 0;
+    dom.emptyState.classList.toggle('is-hidden', hasScript);
+    dom.app.dataset.empty = String(!hasScript);
+    dom.topBtn.disabled = !hasScript;
+    dom.restartBtn.disabled = !hasScript;
+    dom.fsRestartBtn.disabled = !hasScript;
+    dom.playBtn.setAttribute('aria-disabled', String(!hasScript));
+    dom.fsPlayBtn.setAttribute('aria-disabled', String(!hasScript));
+  }
+
+  function setStatus(status) {
+    engine.status = status;
+    dom.app.dataset.state = status;
+
+    const map = {
+      idle: { mode: 'play', label: '开始', aria: '开始播放', statusText: '未开始' },
+      playing: { mode: 'pause', label: '暂停', aria: '暂停播放', statusText: '正在播放' },
+      paused: { mode: 'play', label: '继续', aria: '继续播放', statusText: '已暂停' },
+      finished: { mode: 'replay', label: '重播', aria: '从头重新播放', statusText: '播放完成' }
+    };
+    const config = map[status] || map.idle;
+
+    dom.playBtn.dataset.mode = config.mode;
+    dom.playBtn.setAttribute('aria-label', config.aria);
+    dom.fsPlayBtn.dataset.mode = config.mode;
+    dom.fsPlayBtn.setAttribute('aria-label', config.aria);
+    dom.playLabel.textContent = config.label;
+    dom.statusText.textContent = config.statusText;
+  }
+
+  function updateProgressUI() {
+    let text = '0%';
+    if (state.script.trim() && layout.maxTravel > 0) {
+      const progress = clamp(
+        (engine.readingPos - layout.initialPos) / layout.maxTravel,
+        0,
+        1
+      );
+      text = `${Math.round(progress * 100)}%`;
+    }
+    if (dom.progressText.textContent !== text) {
+      dom.progressText.textContent = text;
+    }
+  }
+
+  /* ================================================================
+     Text and reading-position calculations
+     ================================================================ */
+  function hasReadableScript() {
+    return state.script.trim().length > 0;
+  }
+
+  function getScriptTextNode() {
+    const node = dom.scriptText.firstChild;
+    return node && node.nodeType === Node.TEXT_NODE ? node : null;
+  }
+
+  function getTextRect() {
+    return dom.scriptText.getBoundingClientRect();
+  }
+
+  function getCharRect(index) {
+    const textNode = getScriptTextNode();
+    if (!textNode || !textNode.length) return null;
+
+    let safeIndex = clamp(index, 0, textNode.length - 1);
+    const data = textNode.data || '';
+
+    // Normalize a low surrogate to the start of its code point so emoji and
+    // other astral characters still produce a valid measurement box.
+    if (safeIndex > 0) {
+      const code = data.charCodeAt(safeIndex);
+      const previous = data.charCodeAt(safeIndex - 1);
+      if (code >= 0xDC00 && code <= 0xDFFF && previous >= 0xD800 && previous <= 0xDBFF) {
+        safeIndex -= 1;
+      }
+    }
+
+    const firstCode = data.charCodeAt(safeIndex);
+    const codePointLength =
+      firstCode >= 0xD800 && firstCode <= 0xDBFF &&
+      safeIndex + 1 < data.length
+        ? 2
+        : 1;
+
+    const range = document.createRange();
+    range.setStart(textNode, safeIndex);
+    range.setEnd(textNode, Math.min(safeIndex + codePointLength, textNode.length));
+    let rect = null;
+
+    try {
+      const rects = range.getClientRects();
+      if (rects.length) {
+        rect = rects[0];
+      } else {
+        const box = range.getBoundingClientRect();
+        if (box && (box.height > 0 || box.width > 0)) rect = box;
+      }
+    } catch (error) {
+      return null;
+    }
+
+    range.detach && range.detach();
+    return rect;
+  }
+
+  function firstContentIndex() {
+    const match = /\S/.exec(state.script);
+    return match ? match.index : -1;
+  }
+
+  function lastContentIndex() {
+    for (let index = state.script.length - 1; index >= 0; index -= 1) {
+      if (!/\s/.test(state.script[index])) return index;
+    }
+    return -1;
+  }
+
+  /**
+   * Returns the center of the glyph containing `index`, in coordinates local
+   * to the text node. Using the glyph center (rather than a guessed line-box
+   * center) makes the anchor behave consistently at every font size.
+   */
+  function charCenterY(index) {
+    const rect = getCharRect(index);
+    if (!rect) return null;
+    const textRect = getTextRect();
+    return rect.top - textRect.top + rect.height / 2;
+  }
+
+  function nearestReadableIndex(index) {
+    if (index == null) return -1;
+    const length = state.script.length;
+    if (!length) return -1;
+
+    index = Math.round(clamp(index, 0, length - 1));
+
+    // Find the nearest printable character in either direction. This keeps
+    // the anchor stable even when the caret falls inside a large blank gap.
+    for (let right = index; right < length; right += 1) {
+      if (/\S/.test(state.script[right])) return right;
+    }
+    for (let left = index - 1; left >= 0; left -= 1) {
+      if (/\S/.test(state.script[left])) return left;
+    }
+
+    const first = firstContentIndex();
+    return first >= 0 ? first : index;
+  }
+
+  /**
+   * Read the caret position at the current reading anchor. Chromium/WebKit and
+   * Firefox expose this directly; a geometric fallback covers anything else.
+   */
+  function readCharAtAnchor() {
+    if (!hasReadableScript()) return null;
+
+    const stageRect = dom.stage.getBoundingClientRect();
+    const x = stageRect.left + stageRect.width / 2;
+    const y = stageRect.top + layout.anchorY;
+    let index = null;
+
+    try {
+      if (typeof document.caretRangeFromPoint === 'function') {
+        const range = document.caretRangeFromPoint(x, y);
+        if (range && range.startContainer && range.startContainer.nodeType === Node.TEXT_NODE) {
+          const parent = range.startContainer.parentNode;
+          if (parent === dom.scriptText) index = range.startOffset;
+        }
+      } else if (typeof document.caretPositionFromPoint === 'function') {
+        const position = document.caretPositionFromPoint(x, y);
+        if (position && position.offsetNode && position.offsetNode.nodeType === Node.TEXT_NODE) {
+          if (position.offsetNode.parentNode === dom.scriptText) {
+            index = position.offset;
+          }
+        }
+      }
+    } catch (error) {
+      index = null;
+    }
+
+    if (index == null) {
+      index = findCharIndexByGeometry(y);
+    }
+
+    if (index == null) return engine.lastAnchorChar;
+    return nearestReadableIndex(index);
+  }
+
+  function findCharIndexByGeometry(targetClientY) {
+    const textNode = getScriptTextNode();
+    if (!textNode || !textNode.length) return null;
+
+    let low = 0;
+    let high = textNode.length - 1;
+    let best = null;
+    let bestDistance = Infinity;
+
+    // Binary search works because character centers are monotonic in a single
+    // wrapped text flow. A short local scan repairs newline/whitespace boxes.
+    while (low <= high) {
+      const mid = (low + high) >> 1;
+      const rect = getCharRect(mid);
+      if (!rect) {
+        low = mid + 1;
+        continue;
+      }
+      const center = rect.top + rect.height / 2;
+      const distance = Math.abs(center - targetClientY);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = mid;
+      }
+      if (center < targetClientY) low = mid + 1;
+      else high = mid - 1;
+    }
+
+    if (best == null) return null;
+    const scanStart = Math.max(0, best - 4);
+    const scanEnd = Math.min(textNode.length - 1, best + 4);
+    for (let index = scanStart; index <= scanEnd; index += 1) {
+      const rect = getCharRect(index);
+      if (!rect) continue;
+      const distance = Math.abs((rect.top + rect.height / 2) - targetClientY);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = index;
+      }
+    }
+
+    return best;
+  }
+
+  function rememberReadingChar() {
+    const index = readCharAtAnchor();
+    if (index != null) {
+      engine.lastAnchorChar = index;
+      engine.lastCharSample = performance.now();
+    }
+    return index;
+  }
+
+  /* ================================================================
+     Layout, anchor, and focus rendering
+     ================================================================ */
+  function measureLineHeightPx() {
+    const computed = window.getComputedStyle(dom.scriptText);
+    const lineHeight = parseFloat(computed.lineHeight);
+    if (Number.isFinite(lineHeight) && lineHeight > 0) return lineHeight;
+    const fontSize = parseFloat(computed.fontSize) || state.settings.fontSize;
+    return fontSize * state.settings.lineHeight;
+  }
+
+  function updateAnchorOnly() {
+    const width = dom.stage.clientWidth;
+    const height = dom.stage.clientHeight;
+    if (!width || !height) return;
+
+    // If the viewport itself changed (for example immediately after entering
+    // fullscreen), a full reflow is required. Do not merely overwrite the
+    // recorded size, or the pending ResizeObserver pass would think the stage
+    // was already up to date and skip recalculation of the reading width.
+    if (Math.abs(width - layout.stageWidth) >= 0.5 ||
+        Math.abs(height - layout.stageHeight) >= 0.5) {
+      refreshLayout({ preserveChar: engine.lastAnchorChar });
+      return;
+    }
+
+    layout.anchorY = height * state.settings.guidePosition / 100;
+    dom.readingGuide.style.top = `${layout.anchorY}px`;
+    dom.stage.style.setProperty('--anchor-y', `${layout.anchorY}px`);
+    updateFocusMask();
+    renderReadingPosition();
+  }
+
+  function updateTextWidth() {
+    const stageWidth = dom.stage.clientWidth;
+    if (!stageWidth) return layout.textWidth;
+
+    const requested = stageWidth * state.settings.readingWidth / 100;
+    const safeMax = Math.max(80, stageWidth - 16);
+    const safeMin = Math.min(220, safeMax);
+    const width = clamp(requested, safeMin, safeMax);
+    layout.textWidth = width;
+    dom.textLayer.style.width = `${width}px`;
+    return width;
+  }
+
+  function measureReadingBounds() {
+    layout.lineHeightPx = measureLineHeightPx();
+
+    const first = firstContentIndex();
+    const last = lastContentIndex();
+    if (first < 0 || last < 0) {
+      layout.initialPos = 0;
+      layout.endPos = 0;
+      layout.maxTravel = 0;
+      return;
+    }
+
+    const firstCenter = charCenterY(first);
+    const lastCenter = charCenterY(last);
+    const lineHeight = layout.lineHeightPx;
+
+    layout.initialPos = firstCenter == null ? lineHeight / 2 : firstCenter;
+    layout.endPos = lastCenter == null ? dom.scriptText.offsetHeight - lineHeight / 2 : lastCenter;
+    layout.endPos = Math.max(layout.initialPos, layout.endPos);
+    layout.maxTravel = Math.max(0, layout.endPos - layout.initialPos);
+  }
+
+  function renderReadingPosition() {
+    const y = layout.anchorY - engine.readingPos;
+    dom.textLayer.style.transform = `translate3d(-50%, ${y.toFixed(2)}px, 0)`;
+  }
+
+  function updateFocusMask() {
+    if (!state.settings.focusEnabled || !layout.stageHeight) {
+      dom.scriptViewport.style.webkitMaskImage = 'none';
+      dom.scriptViewport.style.maskImage = 'none';
+      return;
+    }
+
+    const anchor = layout.anchorY || (layout.stageHeight * state.settings.guidePosition / 100);
+    const lineHeight = layout.lineHeightPx || (state.settings.fontSize * state.settings.lineHeight);
+    const coreTop = Math.max(0, anchor - lineHeight);
+    const coreBottom = Math.max(coreTop, anchor + lineHeight);
+    const fade = Math.max(10, lineHeight * 0.78);
+    const outerTop = Math.max(0, coreTop - fade);
+    const outerBottom = Math.min(layout.stageHeight, coreBottom + fade);
+    const topFull = Math.max(coreTop, 0);
+    const bottomFull = Math.min(coreBottom, layout.stageHeight);
+    const dim = 0.4;
+
+    // A single fixed viewport mask keeps the highlight CSS-only and avoids
+    // touching text nodes on every scroll frame.
+    const gradient = [
+      `linear-gradient(to bottom,`,
+      `rgba(0,0,0,${dim}) 0px,`,
+      `rgba(0,0,0,${dim}) ${outerTop.toFixed(2)}px,`,
+      `rgba(0,0,0,0.63) ${Math.max(outerTop, topFull - fade * 0.42).toFixed(2)}px,`,
+      `rgba(0,0,0,1) ${topFull.toFixed(2)}px,`,
+      `rgba(0,0,0,1) ${bottomFull.toFixed(2)}px,`,
+      `rgba(0,0,0,0.63) ${Math.min(outerBottom, bottomFull + fade * 0.42).toFixed(2)}px,`,
+      `rgba(0,0,0,${dim}) ${outerBottom.toFixed(2)}px,`,
+      `rgba(0,0,0,${dim}) 100%)`
+    ].join(' ');
+
+    dom.scriptViewport.style.webkitMaskImage = gradient;
+    dom.scriptViewport.style.maskImage = gradient;
+  }
+
+  /**
+   * Recalculate layout. If a preserved character is supplied, that character
+   * is realigned to the reading anchor after reflow.
+   */
+  function refreshLayout(options = {}) {
+    if (!state.initialized) return;
+
+    const {
+      preserveChar = null,
+      forceInitial = false,
+      forceEnd = false
+    } = options;
+
+    const stageWidth = dom.stage.clientWidth;
+    const stageHeight = dom.stage.clientHeight;
+    if (!stageWidth || !stageHeight) return;
+
+    const previousInitial = layout.initialPos;
+    const previousEnd = layout.endPos;
+    const previousReadingPos = engine.readingPos;
+    const atStart = Math.abs(previousReadingPos - previousInitial) < 0.75;
+    const atEnd = previousEnd > 0 && previousReadingPos >= previousEnd - 0.75;
+    const wasIdle = engine.status === 'idle';
+    const wasFinished = engine.status === 'finished';
+
+    layout.stageWidth = stageWidth;
+    layout.stageHeight = stageHeight;
+    layout.anchorY = stageHeight * state.settings.guidePosition / 100;
+    dom.readingGuide.style.top = `${layout.anchorY}px`;
+
+    updateTextWidth();
+    measureReadingBounds();
+
+    let targetPos;
+
+    if (!hasReadableScript()) {
+      targetPos = 0;
+    } else if (forceInitial || wasIdle || atStart) {
+      targetPos = layout.initialPos;
+    } else if (forceEnd || wasFinished || atEnd) {
+      targetPos = layout.endPos;
+    } else {
+      let alignIndex = preserveChar;
+      if (alignIndex == null) alignIndex = engine.lastAnchorChar;
+      alignIndex = nearestReadableIndex(alignIndex);
+
+      const center = alignIndex >= 0 ? charCenterY(alignIndex) : null;
+      if (center != null) {
+        targetPos = center;
+      } else if (previousEnd > previousInitial) {
+        // Last-resort fallback only. The primary path always uses the
+        // character at the anchor, never a simple scroll-distance ratio.
+        const ratio = clamp((previousReadingPos - previousInitial) / (previousEnd - previousInitial), 0, 1);
+        targetPos = layout.initialPos + ratio * layout.maxTravel;
+      } else {
+        targetPos = layout.initialPos;
+      }
+    }
+
+    engine.readingPos = clamp(targetPos, layout.initialPos, layout.endPos);
+
+    if (hasReadableScript()) {
+      if (engine.status === 'idle' || (atStart && !wasFinished && !forceEnd)) {
+        engine.readingPos = layout.initialPos;
+      }
+      if (engine.status === 'finished' || forceEnd) {
+        engine.readingPos = layout.endPos;
+      }
+    }
+
+    updateFocusMask();
+    renderReadingPosition();
+    updateProgressUI();
+
+    if (preserveChar != null) {
+      engine.lastAnchorChar = preserveChar;
+    } else if (engine.status === 'idle') {
+      engine.lastAnchorChar = firstContentIndex();
+    } else if (engine.status === 'finished') {
+      engine.lastAnchorChar = lastContentIndex();
+    }
+
+    // If playback somehow landed at the end — or a reflow made the entire
+    // script fit on one line — finish cleanly instead of leaving the engine
+    // looping without any possible movement.
+    if (engine.status === 'playing' && hasReadableScript() &&
+        (layout.maxTravel <= 0.5 || engine.readingPos >= layout.endPos - 0.5)) {
+      finishPlayback();
+    }
+  }
+
+  function scheduleResizeRefresh(preserveChar = null) {
+    if (!state.initialized) return;
+    if (preserveChar != null) state.pendingResizeChar = preserveChar;
+
+    if (state.resizeRaf != null) return;
+    state.resizeRaf = window.requestAnimationFrame(() => {
+      state.resizeRaf = null;
+      const charToPreserve = state.pendingResizeChar != null
+        ? state.pendingResizeChar
+        : (engine.lastAnchorChar != null ? engine.lastAnchorChar : readCharAtAnchor());
+      state.pendingResizeChar = null;
+
+      // Ignore duplicate observer callbacks when the stage size has not
+      // actually changed. This prevents needless anchor re-snapping.
+      const width = dom.stage.clientWidth;
+      const height = dom.stage.clientHeight;
+      if (Math.abs(width - layout.stageWidth) < 0.5 &&
+          Math.abs(height - layout.stageHeight) < 0.5) {
+        return;
+      }
+
+      refreshLayout({ preserveChar: charToPreserve });
+    });
+  }
+
+  /* ================================================================
+     Text input and settings mutations
+     ================================================================ */
+  function renderScriptText({ reset = true } = {}) {
+    // textContent, never innerHTML: the user's script is always treated as text.
+    dom.scriptText.textContent = state.script;
+
+    if (reset) {
+      pauseEngine({ capture: false, silent: true });
+      setStatus('idle');
+      engine.readingPos = 0;
+      engine.lastAnchorChar = null;
+      refreshLayout({ forceInitial: true });
+      engine.lastAnchorChar = firstContentIndex();
+      updateProgressUI();
+      updateEngineButtons();
+    }
+
+    updateEditorChrome();
+  }
+
+  function handleScriptInput() {
+    state.script = dom.scriptInput.value;
+    window.clearTimeout(saveScriptNow.indicatorTimer);
+
+    if (!state.storageAvailable) {
+      dom.saveIndicator.classList.remove('is-unsaved');
+      dom.saveText.textContent = '本地存储不可用';
+    } else if (hasReadableScript()) {
+      dom.saveIndicator.classList.add('is-unsaved');
+      dom.saveText.textContent = '正在保存…';
+    } else {
+      dom.saveIndicator.classList.remove('is-unsaved');
+      dom.saveText.textContent = '本地自动保存';
+    }
+
+    renderScriptText({ reset: true });
+    saveScriptDebounced();
+  }
+
+  function setScriptProgrammatically(value, { save = true } = {}) {
+    state.script = value;
+    dom.scriptInput.value = value;
+    renderScriptText({ reset: true });
+    if (save) {
+      saveScriptDebounced.cancel();
+      saveScriptNow();
+    }
+  }
+
+  /**
+   * Coalesce typography/width changes into one reflow per animation frame.
+   * The character captured before the first change of a drag is the stable
+   * reference used to restore the reading position after reflow.
+   */
+  function scheduleReflow(preservedChar) {
+    if (state.pendingLayout != null) return;
+
+    state.pendingLayout = { preservedChar };
+
+    window.requestAnimationFrame(() => {
+      const pending = state.pendingLayout;
+      state.pendingLayout = null;
+      if (!pending) return;
+      dom.scriptText.style.fontSize = `${state.settings.fontSize}px`;
+      dom.scriptText.style.lineHeight = String(state.settings.lineHeight);
+      refreshLayout({ preserveChar: pending.preservedChar });
+    });
+  }
+
+  function setFontSize(value, { persist = true } = {}) {
+    const rounded = clamp(roundToStep(Number(value), 2), LIMITS.fontSize[0], LIMITS.fontSize[1]);
+    if (rounded === state.settings.fontSize) return;
+
+    const preserved = readCharAtAnchor();
+    if (preserved != null) engine.lastAnchorChar = preserved;
+    state.settings.fontSize = rounded;
+
+    dom.fontRange.value = String(rounded);
+    dom.fsFontRange.value = String(rounded);
+    dom.fontValue.textContent = String(rounded);
+    dom.fsFontValue.textContent = `${rounded}px`;
+    updateRangeFill(dom.fontRange);
+    updateRangeFill(dom.fsFontRange);
+
+    scheduleReflow(preserved);
+    if (persist) saveSettingsNow();
+  }
+
+  function setLineHeight(value, { persist = true } = {}) {
+    const rounded = clamp(roundToStep(Number(value), 0.1), LIMITS.lineHeight[0], LIMITS.lineHeight[1]);
+    if (Math.abs(rounded - state.settings.lineHeight) < 0.001) return;
+
+    const preserved = readCharAtAnchor();
+    if (preserved != null) engine.lastAnchorChar = preserved;
+    state.settings.lineHeight = Number(rounded.toFixed(1));
+
+    dom.lineHeightRange.value = String(state.settings.lineHeight);
+    dom.lineHeightValue.textContent = state.settings.lineHeight.toFixed(1);
+    updateRangeFill(dom.lineHeightRange);
+
+    scheduleReflow(preserved);
+    if (persist) saveSettingsNow();
+  }
+
+  function setReadingWidth(value, { persist = true } = {}) {
+    const rounded = clamp(roundToStep(Number(value), 5), LIMITS.readingWidth[0], LIMITS.readingWidth[1]);
+    if (rounded === state.settings.readingWidth) return;
+
+    const preserved = readCharAtAnchor();
+    if (preserved != null) engine.lastAnchorChar = preserved;
+    state.settings.readingWidth = rounded;
+
+    dom.readingWidthRange.value = String(rounded);
+    dom.readingWidthValue.textContent = `${rounded}%`;
+    dom.fsReadingWidthRange.value = String(rounded);
+    dom.fsReadingWidthValue.textContent = `${rounded}%`;
+    updateRangeFill(dom.readingWidthRange);
+    updateRangeFill(dom.fsReadingWidthRange);
+
+    // Width reflow is coalesced to one frame while dragging, just like font
+    // and line-height changes.
+    scheduleReflow(preserved);
+
+    if (persist) saveSettingsNow();
+  }
+
+  function applyFullscreenButtonState() {
+    const isFs = isFullscreenView();
+    dom.fullscreenBtn.title = isFs ? '退出全屏（Esc）' : '进入全屏提词（F）';
+  }
+
+  /* ================================================================
+     Playback engine
+     ================================================================ */
+  function cancelAnimationLoop() {
+    if (engine.rafId != null) {
+      window.cancelAnimationFrame(engine.rafId);
+      engine.rafId = null;
+    }
+  }
+
+  function ensureAnimationLoop() {
+    if (engine.status !== 'playing' || engine.rafId != null) return;
+    engine.lastTimestamp = performance.now();
+    engine.rafId = window.requestAnimationFrame(animationTick);
+  }
+
+  function animationTick(timestamp) {
+    engine.rafId = null;
+
+    if (engine.status !== 'playing') return;
+    if (document.hidden) {
+      // Do not accrue time while the browser tab is in the background.
+      return;
+    }
+
+    if (!engine.lastTimestamp) {
+      engine.lastTimestamp = timestamp;
+    }
+
+    // Clamp frame deltas so returning from a suspended/throttled tab cannot
+    // cause a large jump. The engine remains time-based, not frame-based.
+    const dt = clamp((timestamp - engine.lastTimestamp) / 1000, 0, 0.05);
+    engine.lastTimestamp = timestamp;
+
+    if (layout.maxTravel <= 0.5) {
+      finishPlayback();
+      return;
+    }
+
+    if (dt > 0) {
+      const pixelsPerSecond = state.settings.speed * 10;
+      const next = engine.readingPos + pixelsPerSecond * dt;
+
+      if (next >= layout.endPos) {
+        engine.readingPos = layout.endPos;
+        renderReadingPosition();
+        updateProgressUI();
+        finishPlayback();
+        return;
+      }
+
+      engine.readingPos = next;
+      renderReadingPosition();
+      updateProgressUI();
+    }
+
+    if (timestamp - engine.lastCharSample > 200) {
+      rememberReadingChar();
+    }
+
+    if (engine.status === 'playing') {
+      engine.rafId = window.requestAnimationFrame(animationTick);
+    }
+  }
+
+  function canStartPlayback({ announce = true } = {}) {
+    if (hasReadableScript()) return true;
+    if (announce) {
+      showToast('请先输入口播文案', 2200);
+      if (isFullscreenView()) {
+        dom.stage.focus({ preventScroll: true });
+      } else {
+        dom.scriptInput.focus();
+      }
+    }
+    return false;
+  }
+
+  function startPlayback({ fromStart = false } = {}) {
+    if (!canStartPlayback()) return;
+
+    if (state.pendingLayout != null) {
+      // Let the user start immediately with the latest typography.
+      const pending = state.pendingLayout;
+      state.pendingLayout = null;
+      dom.scriptText.style.fontSize = `${state.settings.fontSize}px`;
+      dom.scriptText.style.lineHeight = String(state.settings.lineHeight);
+      refreshLayout({ preserveChar: pending.preservedChar });
+    }
+
+    if (fromStart || engine.status === 'finished' || engine.readingPos >= layout.endPos - 0.5) {
+      engine.readingPos = layout.initialPos;
+      engine.lastAnchorChar = firstContentIndex();
+      renderReadingPosition();
+      updateProgressUI();
+    }
+
+    engine.lastTimestamp = performance.now();
+    setStatus('playing');
+    engine.lastAnchorChar = readCharAtAnchor() ?? engine.lastAnchorChar;
+    updateEngineButtons();
+
+    if (layout.maxTravel <= 0.5) {
+      finishPlayback();
+      return;
+    }
+
+    ensureAnimationLoop();
+    showFullscreenDockTemporarily();
+  }
+
+  function resumePlayback() {
+    if (!hasReadableScript()) return;
+    if (engine.status === 'finished' || engine.readingPos >= layout.endPos - 0.5) {
+      startPlayback({ fromStart: true });
+      return;
+    }
+    engine.lastTimestamp = performance.now();
+    setStatus('playing');
+    updateEngineButtons();
+    ensureAnimationLoop();
+    showFullscreenDockTemporarily();
+  }
+
+  function pauseEngine({ capture = true, silent = false } = {}) {
+    if (capture) rememberReadingChar();
+    cancelAnimationLoop();
+    if (engine.status === 'playing') {
+      setStatus('paused');
+      updateEngineButtons();
+      if (!silent) showFullscreenDockTemporarily();
+    }
+  }
+
+  function finishPlayback() {
+    cancelAnimationLoop();
+    engine.readingPos = layout.endPos;
+    engine.lastAnchorChar = lastContentIndex();
+    renderReadingPosition();
+    updateProgressUI();
+    setStatus('finished');
+    updateEngineButtons();
+    showToast('播放完成', 1800, 'success');
+    showFullscreenDockTemporarily();
+  }
+
+  function togglePlayback() {
+    if (engine.status === 'playing') {
+      pauseEngine();
+    } else if (engine.status === 'paused') {
+      resumePlayback();
+    } else if (engine.status === 'finished') {
+      startPlayback({ fromStart: true });
+    } else {
+      startPlayback();
+    }
+  }
+
+  function restartPlayback() {
+    if (!canStartPlayback()) return;
+    startPlayback({ fromStart: true });
+  }
+
+  function returnToTop() {
+    cancelAnimationLoop();
+    if (!hasReadableScript()) {
+      setStatus('idle');
+      updateEngineButtons();
+      return;
+    }
+    engine.readingPos = layout.initialPos;
+    engine.lastAnchorChar = firstContentIndex();
+    renderReadingPosition();
+    updateProgressUI();
+    setStatus('idle');
+    updateEngineButtons();
+    showFullscreenDockTemporarily();
+  }
+
+  function updateEngineButtons() {
+    dom.topBtn.disabled = !hasReadableScript();
+    dom.restartBtn.disabled = !hasReadableScript();
+    dom.fsRestartBtn.disabled = !hasReadableScript();
+  }
+
+  /* ================================================================
+     Fullscreen
+     ================================================================ */
+  function nativeFullscreenElement() {
+    return document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.webkitCurrentFullScreenElement ||
+      null;
+  }
+
+  function isFullscreenView() {
+    return Boolean(state.nativeFullscreen || state.fauxFullscreen);
+  }
+
+  function setFullscreenViewClass(active) {
+    dom.stage.classList.toggle('is-fullscreen-view', active);
+    document.body.classList.toggle('is-faux-fullscreen', active && state.fauxFullscreen);
+    dom.app.classList.toggle('is-fullscreen', active);
+
+    // In native fullscreen these surfaces are not rendered at all. In the
+    // immersive fallback they remain behind the stage, so make them inert to
+    // keep Tab and screen-reader navigation inside the fullscreen surface.
+    if (dom.topbar) dom.topbar.inert = active;
+    if (dom.sidebar) dom.sidebar.inert = active;
+
+    applyFullscreenButtonState();
+
+    // Move focus onto the fullscreen surface. Otherwise a hidden sidebar
+    // button or range input can keep focus and swallow Space / arrow shortcuts.
+    if (document.activeElement !== dom.stage) {
+      dom.stage.focus({ preventScroll: true });
+    }
+  }
+
+  function showFullscreenDockTemporarily(duration = 3000) {
+    if (!isFullscreenView()) return;
+    window.clearTimeout(state.fsHideTimer);
+    state.fsUiVisible = true;
+    dom.stage.classList.add('fs-ui-visible');
+    dom.fsDock.setAttribute('aria-hidden', 'false');
+    state.fsHideTimer = window.setTimeout(() => {
+      if (!isFullscreenView()) return;
+      state.fsUiVisible = false;
+      dom.stage.classList.remove('fs-ui-visible');
+      dom.fsDock.setAttribute('aria-hidden', 'true');
+      if (dom.fsDock.contains(document.activeElement)) {
+        dom.stage.focus({ preventScroll: true });
+      }
+    }, duration);
+  }
+
+  function hideFullscreenDock() {
+    window.clearTimeout(state.fsHideTimer);
+    state.fsUiVisible = false;
+    dom.stage.classList.remove('fs-ui-visible');
+    dom.fsDock.setAttribute('aria-hidden', 'true');
+    if (dom.fsDock.contains(document.activeElement)) {
+      dom.stage.focus({ preventScroll: true });
+    }
+  }
+
+  function rememberCharBeforeViewportChange() {
+    const index = readCharAtAnchor();
+    if (index != null) {
+      engine.lastAnchorChar = index;
+      state.pendingResizeChar = index;
+    }
+  }
+
+  async function enterFullscreen() {
+    if (isFullscreenView()) return;
+
+    rememberCharBeforeViewportChange();
+
+    const request =
+      dom.stage.requestFullscreen ||
+      dom.stage.webkitRequestFullscreen ||
+      dom.stage.webkitRequestFullScreen;
+
+    if (!request) {
+      enableFauxFullscreen();
+      return;
+    }
+
+    // If a browser silently ignores the request (some file:// contexts do),
+    // switch to the immersive fallback instead of leaving the button inert.
+    window.clearTimeout(state.fsFallbackTimer);
+    state.fsFallbackTimer = window.setTimeout(() => {
+      state.fsFallbackTimer = 0;
+      if (!isFullscreenView() && nativeFullscreenElement() !== dom.stage) {
+        console.warn('Native fullscreen did not activate; using immersive fallback.');
+        enableFauxFullscreen();
+      }
+    }, 900);
+
+    try {
+      const result = request.call(dom.stage, { navigationUI: 'hide' });
+      if (result && typeof result.then === 'function') {
+        await result;
+      }
+    } catch (error) {
+      // Some browsers disallow the fullscreen API on file:// URLs. Use an
+      // equivalent immersive view instead of leaving the user blocked.
+      console.warn('Native fullscreen unavailable, using immersive fallback:', error);
+      enableFauxFullscreen();
+    }
+  }
+
+  function exitFullscreen() {
+    window.clearTimeout(state.fsFallbackTimer);
+    state.fsFallbackTimer = 0;
+
+    if (state.fauxFullscreen) {
+      disableFauxFullscreen();
+      return;
+    }
+
+    const docExit =
+      document.exitFullscreen ||
+      document.webkitExitFullscreen ||
+      document.webkitCancelFullScreen;
+    if (nativeFullscreenElement() && docExit) {
+      rememberCharBeforeViewportChange();
+      try {
+        const result = docExit.call(document);
+        if (result && typeof result.catch === 'function') {
+          result.catch(() => {});
+        }
+      } catch (error) {
+        // Browser-level Escape is still available as a fallback.
+      }
+    }
+  }
+
+  function toggleFullscreen() {
+    if (isFullscreenView()) exitFullscreen();
+    else enterFullscreen();
+  }
+
+  function enableFauxFullscreen() {
+    window.clearTimeout(state.fsFallbackTimer);
+    state.fsFallbackTimer = 0;
+    state.fauxFullscreen = true;
+    setFullscreenViewClass(true);
+    showFullscreenDockTemporarily();
+    window.setTimeout(() => scheduleResizeRefresh(engine.lastAnchorChar), 0);
+    showToast('已进入沉浸全屏模式', 1800);
+  }
+
+  function disableFauxFullscreen() {
+    window.clearTimeout(state.fsFallbackTimer);
+    state.fsFallbackTimer = 0;
+    rememberCharBeforeViewportChange();
+    state.fauxFullscreen = false;
+    hideFullscreenDock();
+    setFullscreenViewClass(false);
+    window.setTimeout(() => scheduleResizeRefresh(engine.lastAnchorChar), 0);
+  }
+
+  function handleNativeFullscreenChange() {
+    const fullscreenElement = nativeFullscreenElement();
+    const active = fullscreenElement === dom.stage;
+    const wasActive = state.nativeFullscreen;
+    state.nativeFullscreen = active;
+
+    window.clearTimeout(state.fsFallbackTimer);
+    state.fsFallbackTimer = 0;
+
+    if (active) {
+      hideFullscreenDock();
+      setFullscreenViewClass(true);
+      showFullscreenDockTemporarily();
+    } else if (wasActive) {
+      hideFullscreenDock();
+      setFullscreenViewClass(false);
+    }
+
+    const preserve = state.pendingResizeChar != null
+      ? state.pendingResizeChar
+      : engine.lastAnchorChar;
+
+    // The browser needs one layout frame to settle the new fullscreen size.
+    window.setTimeout(() => scheduleResizeRefresh(preserve), 0);
+    // Safari can finish its native fullscreen transition a little later.
+    // Capture the live reading position again for that settling pass instead
+    // of restoring an old character and nudging active playback backwards.
+    window.setTimeout(() => {
+      const width = dom.stage.clientWidth;
+      const height = dom.stage.clientHeight;
+      if (Math.abs(width - layout.stageWidth) < 0.5 &&
+          Math.abs(height - layout.stageHeight) < 0.5) {
+        return;
+      }
+      const current = readCharAtAnchor();
+      scheduleResizeRefresh(current != null ? current : engine.lastAnchorChar);
+    }, 160);
+  }
+
+  /* ================================================================
+     Event wiring
+     ================================================================ */
+  function setupEditorEvents() {
+    dom.scriptInput.addEventListener('input', handleScriptInput);
+
+    dom.clearScriptBtn.addEventListener('click', () => {
+      if (!state.script.length) return;
+      if (typeof dom.clearDialog.showModal === 'function') {
+        dom.clearDialog.showModal();
+        window.setTimeout(() => dom.cancelClearBtn.focus(), 0);
+      } else if (window.confirm('确定要清空全部文案吗？')) {
+        setScriptProgrammatically('', { save: true });
+      }
+    });
+
+    dom.cancelClearBtn.addEventListener('click', () => dom.clearDialog.close());
+    dom.confirmClearBtn.addEventListener('click', () => {
+      setScriptProgrammatically('', { save: true });
+      dom.clearDialog.close();
+    });
+
+    dom.clearDialog.addEventListener('click', (event) => {
+      if (event.target === dom.clearDialog) dom.clearDialog.close();
+    });
+  }
+
+  function setupSettingEvents() {
+    dom.speedRange.addEventListener('input', () => setSpeed(dom.speedRange.value));
+    dom.fsSpeedRange.addEventListener('input', () => {
+      setSpeed(dom.fsSpeedRange.value);
+      showFullscreenDockTemporarily();
+    });
+
+    dom.fontRange.addEventListener('input', () => setFontSize(dom.fontRange.value));
+    dom.fsFontRange.addEventListener('input', () => {
+      setFontSize(dom.fsFontRange.value);
+      showFullscreenDockTemporarily();
+    });
+
+    dom.lineHeightRange.addEventListener('input', () => setLineHeight(dom.lineHeightRange.value));
+    dom.guidePositionRange.addEventListener('input', () => setGuidePosition(dom.guidePositionRange.value));
+    dom.readingWidthRange.addEventListener('input', () => setReadingWidth(dom.readingWidthRange.value));
+    dom.fsReadingWidthRange.addEventListener('input', () => {
+      setReadingWidth(dom.fsReadingWidthRange.value);
+      showFullscreenDockTemporarily();
+    });
+
+    dom.guideToggle.addEventListener('change', () => {
+      setGuideVisible(dom.guideToggle.checked);
+      showFullscreenDockTemporarily();
+    });
+
+    dom.focusToggle.addEventListener('change', () => {
+      setFocusEnabled(dom.focusToggle.checked);
+      showFullscreenDockTemporarily();
+    });
+
+    dom.themeDarkBtn.addEventListener('click', () => setTheme('dark'));
+    dom.themeLightBtn.addEventListener('click', () => setTheme('light'));
+  }
+
+  function setupTransportEvents() {
+    dom.playBtn.addEventListener('click', togglePlayback);
+    dom.fsPlayBtn.addEventListener('click', () => {
+      togglePlayback();
+      showFullscreenDockTemporarily();
+    });
+    dom.restartBtn.addEventListener('click', restartPlayback);
+    dom.fsRestartBtn.addEventListener('click', () => {
+      restartPlayback();
+      showFullscreenDockTemporarily();
+    });
+    dom.topBtn.addEventListener('click', returnToTop);
+    dom.fullscreenBtn.addEventListener('click', toggleFullscreen);
+    dom.exitFullscreenBtn.addEventListener('click', exitFullscreen);
+  }
+
+  function setupFullscreenEvents() {
+    document.addEventListener('fullscreenchange', handleNativeFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleNativeFullscreenChange);
+
+    dom.stage.addEventListener('pointermove', (event) => {
+      if (!isFullscreenView()) return;
+
+      if (!state.fsUiVisible) {
+        if (event.clientY >= window.innerHeight - 190) {
+          showFullscreenDockTemporarily();
+        }
+        return;
+      }
+
+      // Keep the toolbar alive while the pointer is being used, then hide it
+      // again after three seconds of inactivity.
+      showFullscreenDockTemporarily();
+    });
+
+    dom.fsDock.addEventListener('pointerdown', () => showFullscreenDockTemporarily());
+    dom.fsDock.addEventListener('focusin', () => showFullscreenDockTemporarily());
+  }
+
+  function setupKeyboardEvents() {
+    document.addEventListener('keydown', (event) => {
+      if (event.defaultPrevented) return;
+      if (event.isComposing || event.keyCode === 229) return;
+      if (dom.clearDialog.open) return;
+
+      // Handle Escape before the editable-control guard because the fullscreen
+      // dock contains range inputs. Native fullscreen Escape is handled by the
+      // browser, but we still remember the exact reading character first.
+      if (event.key === 'Escape') {
+        if (state.fauxFullscreen) {
+          event.preventDefault();
+          exitFullscreen();
+        } else if (state.nativeFullscreen) {
+          rememberCharBeforeViewportChange();
+        }
+        return;
+      }
+
+      const target = event.target;
+      const tagName = target && target.tagName ? target.tagName : '';
+      const inputType = tagName === 'INPUT' ? String(target.type || '').toLowerCase() : '';
+      const isTextEntry =
+        tagName === 'TEXTAREA' ||
+        tagName === 'SELECT' ||
+        (tagName === 'INPUT' && !['range', 'checkbox', 'radio', 'button', 'submit'].includes(inputType)) ||
+        (target && target.isContentEditable);
+
+      // Never steal keys from a text field. Range controls keep their native
+      // arrow/Space/Home behavior, but global commands such as F and R still
+      // remain available while a slider is focused.
+      if (isTextEntry) return;
+
+      const hasCommandModifier = event.metaKey || event.ctrlKey || event.altKey;
+      if (hasCommandModifier) return;
+
+      const key = event.key;
+      const isRange = tagName === 'INPUT' && inputType === 'range';
+
+      if (event.code === 'Space') {
+        // Let a focused button or checkbox handle Space natively. A focused
+        // range has no native Space action, so keep Space available for play.
+        if ((target && target.closest && target.closest('button')) ||
+            (tagName === 'INPUT' && inputType !== 'range')) {
+          return;
+        }
+        event.preventDefault();
+        togglePlayback();
+        showFullscreenDockTemporarily();
+        return;
+      }
+
+      if (key === 'ArrowUp') {
+        if (isRange) return;
+        event.preventDefault();
+        setSpeed(state.settings.speed + 0.5);
+        showFullscreenDockTemporarily();
+        return;
+      }
+
+      if (key === 'ArrowDown') {
+        if (isRange) return;
+        event.preventDefault();
+        setSpeed(state.settings.speed - 0.5);
+        showFullscreenDockTemporarily();
+        return;
+      }
+
+      if (key === '+' || key === '=' || event.code === 'NumpadAdd') {
+        event.preventDefault();
+        setFontSize(state.settings.fontSize + 2);
+        showFullscreenDockTemporarily();
+        return;
+      }
+
+      if (key === '-' || key === '−' || event.code === 'NumpadSubtract') {
+        event.preventDefault();
+        setFontSize(state.settings.fontSize - 2);
+        showFullscreenDockTemporarily();
+        return;
+      }
+
+      if (key === 'Home') {
+        if (isRange) return;
+        event.preventDefault();
+        returnToTop();
+        showFullscreenDockTemporarily();
+        return;
+      }
+
+      if (key === 'r' || key === 'R') {
+        event.preventDefault();
+        restartPlayback();
+        showFullscreenDockTemporarily();
+        return;
+      }
+
+      if (key === 'f' || key === 'F') {
+        event.preventDefault();
+        toggleFullscreen();
+        showFullscreenDockTemporarily();
+        return;
+      }
+
+    });
+  }
+
+  function setupLifecycleEvents() {
+    // Single source of layout truth. ResizeObserver covers window resizes,
+    // native fullscreen transitions, and any sidebar size changes.
+    if (typeof ResizeObserver === 'function') {
+      const observer = new ResizeObserver(() => {
+        if (!state.initialized) return;
+        const preserve = state.pendingResizeChar != null
+          ? state.pendingResizeChar
+          : engine.lastAnchorChar;
+        scheduleResizeRefresh(preserve);
+      });
+      observer.observe(dom.stage);
+    } else {
+      window.addEventListener('resize', () => scheduleResizeRefresh(engine.lastAnchorChar));
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (engine.status === 'playing') {
+          rememberReadingChar();
+          cancelAnimationLoop();
+        }
+        return;
+      }
+
+      // A display/window size change may have happened while we were hidden.
+      if (Math.abs(dom.stage.clientWidth - layout.stageWidth) >= 0.5 ||
+          Math.abs(dom.stage.clientHeight - layout.stageHeight) >= 0.5) {
+        scheduleResizeRefresh(engine.lastAnchorChar);
+      }
+
+      if (engine.status === 'playing') {
+        engine.lastTimestamp = performance.now();
+        ensureAnimationLoop();
+      }
+    });
+
+    window.addEventListener('pagehide', () => {
+      saveScriptDebounced.flush();
+    });
+
+    window.addEventListener('beforeunload', () => {
+      saveScriptDebounced.flush();
+    });
+
+    // Mouse inactivity in fullscreen hides the dock and the cursor.
+    dom.stage.addEventListener('pointerleave', () => {
+      if (!isFullscreenView()) return;
+      // Do not hide while a dock control is being used.
+    });
+
+    document.addEventListener('pointerdown', (event) => {
+      if (!isFullscreenView()) return;
+      if (dom.stage.contains(event.target)) showFullscreenDockTemporarily();
+    });
+  }
+
+  /* ================================================================
+     Initialization
+     ================================================================ */
+  function initialLayout() {
+    dom.scriptInput.value = state.script;
+    dom.scriptText.textContent = state.script;
+    syncAllControlsFromState();
+    updateEditorChrome();
+    setStatus('idle');
+    updateEngineButtons();
+
+    // Two frames ensure sidebar sizing and font metrics are settled before
+    // measuring the glyph that establishes the first reading anchor.
+    window.requestAnimationFrame(() => {
+      state.initialized = true;
+      refreshLayout({ forceInitial: true });
+      dom.stage.classList.add('is-ready');
+      window.requestAnimationFrame(() => {
+        refreshLayout({ forceInitial: true });
+        engine.lastAnchorChar = firstContentIndex();
+        if (!state.storageAvailable) {
+          showToast('浏览器本地存储不可用，当前文案和设置可能无法自动保存。', 6200);
+          storageFailureNotified = true;
+        }
+      });
+    });
+
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => {
+        if (!state.initialized) return;
+        const preserve = engine.status === 'idle' ? null : engine.lastAnchorChar;
+        if (engine.status === 'idle') refreshLayout({ forceInitial: true });
+        else refreshLayout({ preserveChar: preserve });
+      }).catch(() => {});
+    }
+  }
+
+  function init() {
+    loadPersistedData();
+    state.initialized = false; // layout routines wait for the first paint
+    setupEditorEvents();
+    setupSettingEvents();
+    setupTransportEvents();
+    setupFullscreenEvents();
+    setupKeyboardEvents();
+    setupLifecycleEvents();
+
+    dom.saveIndicator.classList.remove('is-unsaved');
+    dom.saveText.textContent = state.storageAvailable ? '本地自动保存' : '本地存储不可用';
+    dom.fsDock.setAttribute('aria-hidden', 'true');
+    setTheme(state.settings.theme, { persist: false });
+    initialLayout();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
